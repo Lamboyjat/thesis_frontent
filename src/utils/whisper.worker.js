@@ -3,7 +3,7 @@ import { MessageTypes } from "./presets"
 
 class MyTranscriptionPipeline {
     static task = 'automatic-speech-recognition'
-    static model = 'openai/whisper-tiny.en'
+    static model = 'Xenova/whisper-medium' // 'Xenova/whisper-tiny.en'
     static instance = null
 
     static async getInstance(progress_callback = null) {
@@ -22,19 +22,35 @@ self.addEventListener('message', async (event) => {
     }
 })
 
+// async function transcribe(audio) {
+//     sendLoadingMessage('loading')
+
+//     let pipeline
+
+//     try {
+//         pipeline = await MyTranscriptionPipeline.getInstance(load_model_callback)
+//     } catch (err) {
+//         console.log(err.message)
+//     }
+
+//     sendLoadingMessage('success')
 async function transcribe(audio) {
-    sendLoadingMessage('loading')
-
-    let pipeline
-
+    sendLoadingMessage('loading');
+  
+    let pipeline;
+  
     try {
-        pipeline = await MyTranscriptionPipeline.getInstance(load_model_callback)
+      pipeline = await MyTranscriptionPipeline.getInstance(load_model_callback);
+      if (!pipeline) {
+        throw new Error('Pipeline initialization failed.');
+      }
     } catch (err) {
-        console.log(err.message)
+      console.log(err.message);
+      sendLoadingMessage('error');
+      return; // Stop execution if pipeline cannot be initialized
     }
-
-    sendLoadingMessage('success')
-
+  
+    sendLoadingMessage('success');
     const stride_length_s = 5
 
     const generationTracker = new GenerationTracker(pipeline, stride_length_s)
@@ -75,16 +91,30 @@ async function sendDownloadingMessage(file, progress, loaded, total) {
     })
 }
 
+// class GenerationTracker {
+//     constructor(pipeline, stride_length_s) {
+//         this.pipeline = pipeline
+//         this.stride_length_s = stride_length_s
+//         // this.chunks = []
+//         this.time_precision = pipeline?.processor.feature_extractor.config.chunk_length / pipeline.model.config.max_source_positions
+//         this.processed_chunks = []
+//         this.callbackFunctionCounter = 0
+//     }
+
 class GenerationTracker {
     constructor(pipeline, stride_length_s) {
-        this.pipeline = pipeline
-        this.stride_length_s = stride_length_s
-        this.chunks = []
-        this.time_precision = pipeline?.processor.feature_extractor.config.chunk_length / pipeline.model.config.max_source_positions
-        this.processed_chunks = []
-        this.callbackFunctionCounter = 0
+        if (!pipeline || !pipeline.processor || !pipeline.processor.feature_extractor || !pipeline.model) {
+        throw new Error('Pipeline, processor, feature_extractor, or model is undefined.');
+        }
+    
+        this.pipeline = pipeline;
+        this.stride_length_s = stride_length_s;
+        this.chunks = [];
+        this.time_precision = pipeline.processor.feature_extractor.config.chunk_length / pipeline.model.config.max_source_positions;
+        this.processed_chunks = [];
+        this.callbackFunctionCounter = 0;
     }
-
+      
     sendFinalResult() {
         self.postMessage({ type: MessageTypes.INFERENCE_DONE })
     }

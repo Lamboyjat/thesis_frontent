@@ -10,7 +10,7 @@ export const Header = () => {
         </a>
         <button className='flex items-center gap-2 specialBtn px-4 py-3 rounded-lg text-blue-400'>
             <p>New</p>
-            <i class="fa-solid fa-plus"></i>
+            <i className="fa-solid fa-plus"></i>
         </button>
     </header>
   )
